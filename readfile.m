@@ -38,7 +38,5 @@ theta_loc = ncread(fname,'temp',[156 83 1 1],[1 1 Inf Inf]);
 % I didn't have time to write something here!
 % But next time, play with the above, plot some figures
 % just to practice
-hhhhhhhhhhhhhhhh
-9999999999999999
-88888888888
 
+hhhhhhh
