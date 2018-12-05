@@ -30,8 +30,8 @@ dy = ones(size(lat_rho,1),size(lat_rho,2));
 
 % Creates 2d grid of same size as model
 [xx yy] = meshgrid([1:size(lat_rho,2)],[1:size(lon_rho,1)]); 
-[X,Y] = meshgrid([-10:0.5:20],[-20:0.5:15]);
-Z = -(X + Y);
+[X,Y] = meshgrid([0:0.5:30],[0:0.5:40]);
+Z = 10-(X + Y);
 %Z = -(xx_,yy_);
 
 % set variable useful for the trajectory equation
@@ -79,8 +79,8 @@ ua= sqrt(sustr / (rho_air * Cd)); % m s-2
 va= sqrt(svstr / (rho_air * Cd)); % m s-2
 
 % indicate the initial location of the particle
-xx_ini = 2;
-yy_ini = 10;
+xx_ini = 12;
+yy_ini = 30;
 
 % timestep
 dt = 60; % s
@@ -128,7 +128,7 @@ for i=1:step
   Fo_all(i) = sqrt(Fo2_u ^ 2 + Fo2_v ^ 2);
   Fc_all(i) = Fcoriolis;
   
-  z = -(xx_ + yy_);
+  z = 10-(xx_ + yy_);
   if abs(depth_icb_under) > abs(z)
       break
   end
@@ -142,19 +142,21 @@ for i=1:step
 end
 end
 
-disp(['warning! when i = ',num2str(i)]);
-disp(['x = ',num2str(xx_),' y = ',num2str(yy_)]);
+disp(['warning! when time = ',num2str(i-1),' min']);
+disp(['x = ',num2str(x_all(i-1)),' y = ',num2str(y_all(i-1))]);
 
 subplot(2,2,1);
 plot(vel_all(1:i),'*-');
 title('velocity - time');
-xlabel('xx(m)');
-ylabel('yy(m)');
+xlabel('time(min)');
+ylabel('velocity(m/s)');
 
 subplot(2,2,2);
 plot(U_all(1:i),'-r.');
 hold on;
 plot(V_all(1:i),'-b*');
+legend('U','V');
+legend('boxoff');
 title('U&V - time');
 xlabel('time(min)');
 ylabel('velocity(m/s)');
@@ -162,6 +164,7 @@ ylabel('velocity(m/s)');
 subplot(2,2,3);
 mesh(X,Y,-10+Z);
 hold on;
+zlim([-50,0]);
 plot(x_all(1:i),y_all(1:i),'*-');
 title('trajectory of iceberg');
 xlabel('xx(m)');
@@ -173,6 +176,8 @@ hold on;
 plot(Fo_all(1:i),'-b*');
 hold on;
 plot(Fc_all(1:i),'-y+');
+legend('F_atomas','F_ocean','F_coriolis');
+legend('boxoff');
 title('F - time');
 xlabel('time(min)');
 ylabel('force(N)');
