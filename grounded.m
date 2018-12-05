@@ -1,10 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%    make a 2D grid and use the trajectory equations
-%    from T. Rackow to know where a particule is
-%    moving in the domain
-%
-%    First step into the iceberg trajectory model
+%    Grounded model
 %
 %    Author: weiyan ZHANG
 %    Created: Oct 2018
@@ -31,7 +26,7 @@ dy = ones(size(lat_rho,1),size(lat_rho,2));
 % Creates 2d grid of same size as model
 [xx yy] = meshgrid([1:size(lat_rho,2)],[1:size(lon_rho,1)]); 
 [X,Y] = meshgrid([0:0.5:30],[0:0.5:40]);
-Z = 10 - (X + Y);
+Z = 4 - X ;
 %Z = - (xx_,yy_);
 
 % set variable useful for the trajectory equation
@@ -55,6 +50,7 @@ Fa_all = zeros(1,step);
 Fo_all = zeros(1,step);
 Fc_all = zeros(1,step);
 vel_all = zeros(1,step);
+z_all = zeros(1,step);
 
 % ocean velocity (so far only in 1 direction and constant over the entire domain
     
@@ -79,8 +75,8 @@ ua= sqrt(sustr / (rho_air * Cd)); % m s-2
 va= sqrt(svstr / (rho_air * Cd)); % m s-2
 
 % indicate the initial location of the particle
-xx_ini = 12;
-yy_ini = 30;
+xx_ini = 15;
+yy_ini = 20;
 
 % timestep
 dt = 60; % s
@@ -128,9 +124,14 @@ for i=1:step
   Fo_all(i) = sqrt(Fo2_u ^ 2 + Fo2_v ^ 2);
   Fc_all(i) = Fcoriolis;
   
-  z = 10 - (xx_ + yy_);
-  
-  if abs(depth_icb_under) > abs(z)
+  z = 4 - xx_;
+  z_all(i) = z;
+
+  if xx_>=0 && xx_<=30 && yy_>=0 && yy_<=40 
+      if abs(depth_icb_under) > abs(z)
+          break
+      end
+  else
       break
   end
   
@@ -143,19 +144,24 @@ for i=1:step
 end
 end
 
-disp(['warning! when time = ',num2str(i-1),' min']);
-disp(['x = ',num2str(x_all(i-1)),' y = ',num2str(y_all(i-1))]);
+if abs(depth_icb_under) > abs(z)
+    disp(['warning! ground when time = ',num2str(i-1),' min']);
+    disp(['x = ',num2str(x_all(i-1)),' y = ',num2str(y_all(i-1))]);
+else
+    disp(['warning! out of domain when time = ',num2str(i-1),' min']);
+    disp(['x = ',num2str(x_all(i-1)),' y = ',num2str(y_all(i-1))]);
+end
 
 subplot(2,2,1);
-plot(vel_all(1:i),'*-');
+plot(vel_all(1:i-1),'*-');
 title('velocity - time');
 xlabel('time(min)');
 ylabel('velocity(m/s)');
 
 subplot(2,2,2);
-plot(U_all(1:i),'-r.');
+plot(U_all(1:i-1),'-r.');
 hold on;
-plot(V_all(1:i),'-b*');
+plot(V_all(1:i-1),'-b*');
 legend('U','V');
 legend('boxoff');
 title('U&V - time');
@@ -172,11 +178,11 @@ xlabel('xx(m)');
 ylabel('yy(m)');
 
 subplot(2,2,4);
-plot(Fa_all(1:i),'-r.');
+plot(Fa_all(1:i-1),'-r.');
 hold on;
-plot(Fo_all(1:i),'-b*');
+plot(Fo_all(1:i-1),'-b*');
 hold on;
-plot(Fc_all(1:i),'-y+');
+plot(Fc_all(1:i-1),'-y+');
 legend('F_ atomas','F_ ocean','F_ coriolis');
 legend('boxoff');
 title('F - time');
