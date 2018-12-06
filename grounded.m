@@ -24,9 +24,11 @@ dx = ones(size(lat_rho,1),size(lat_rho,2));
 dy = ones(size(lat_rho,1),size(lat_rho,2));
 
 % Creates 2d grid of same size as model
+X_lim = 1000;
+Y_lim = 1000;
 [xx yy] = meshgrid([1:size(lat_rho,2)],[1:size(lon_rho,1)]); 
-[X,Y] = meshgrid([0:0.5:30],[0:0.5:40]);
-Z = 4 - X ;
+[X,Y] = meshgrid([0:X_lim],[0:Y_lim]);
+Z = 470 - X ;
 %Z = - (xx_,yy_);
 
 % set variable useful for the trajectory equation
@@ -34,12 +36,16 @@ U = 0;
 V = 0;
 
 % size of the iceberg 
-depth_icb_under = 9; % m
-dA_o = 90; % m^2 ideally per face 
-dA_a = 10; % m^2 ideally per face
-Ad = 100;
-M = 9.167e5; % kg
-             % density is 916.7 kg m-3, volume of iceberg is 1000 m3
+depth = 90; % m
+depth_icb_under = 81;
+depth_icb_above = 9;
+lenth = 100;
+width = 100;
+dA_o = width * depth_icb_under; % m^2 ideally per face 
+dA_a = width * depth_icb_above; % m^2 ideally per face
+Ad = lenth * width;
+M = 916.7 * lenth * width * depth; % kg
+             % density is 916.7 kg m-3
              
 step = 2000;
 U_all = zeros(1,step);
@@ -75,8 +81,8 @@ ua= sqrt(sustr / (rho_air * Cd)); % m s-2
 va= sqrt(svstr / (rho_air * Cd)); % m s-2
 
 % indicate the initial location of the particle
-xx_ini = 15;
-yy_ini = 20;
+xx_ini = 350;
+yy_ini = 600;
 
 % timestep
 dt = 60; % s
@@ -99,17 +105,17 @@ for i=1:step
         amid_skin = sqrt((ua - U) ^ 2 + (va - V) ^ 2);
 
 % Force due to Air
-        Fa2_u = rho_air * 0.5 * Ca * dA_a * amid * (ua - U) + rho_air * Cda_skin * Ad * amid_skin * (ua - U);
-        Fa2_v = rho_air * 0.5 * Ca * dA_a * amid * (va - U) +  rho_air * Cda_skin * Ad * amid_skin * (va - V);
+        Fa_u = rho_air * 0.5 * Ca * dA_a * amid * (ua - U) + rho_air * Cda_skin * Ad * amid_skin * (ua - U);
+        Fa_v = rho_air * 0.5 * Ca * dA_a * amid * (va - U) +  rho_air * Cda_skin * Ad * amid_skin * (va - V);
 
 % Force due to the Ocean
-        Fo2_u = rho_h2o * 0.5 * Co * dA_o * omid * (uo_cst - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (uo_cst - U);
-        Fo2_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst - V);
+        Fo_u = rho_h2o * 0.5 * Co * dA_o * omid * (uo_cst - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (uo_cst - U);
+        Fo_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst - V);
 
 % Coriolis Force
-        Fcoriolis = sqrt((-M * f * (V - vo_cst))^2+(M * f * (U - uo_cst))^2);   
-        au = ((-M * f * (V - vo_cst)) + Fa2_u + Fo2_u) / M;
-        av = (-(-M * f * (U - uo_cst)) + Fa2_v + Fo2_v) / M;
+        F_coriolis = sqrt((-M * f * (V - vo_cst))^2+(M * f * (U - uo_cst))^2);   
+        au = ((-M * f * (V - vo_cst)) + Fa_u + Fo_u) / M;
+        av = (-(-M * f * (U - uo_cst)) + Fa_v + Fo_v) / M;
                          
 % calculate velocity
   s_u = U*dt+0.5*au*dt^2;
@@ -120,14 +126,14 @@ for i=1:step
   V_all(i) = V;
   vel = sqrt(U^2+V^2);
   vel_all(i) = vel;
-  Fa_all(i) = sqrt(Fa2_u ^ 2 + Fa2_v ^ 2);
-  Fo_all(i) = sqrt(Fo2_u ^ 2 + Fo2_v ^ 2);
-  Fc_all(i) = Fcoriolis;
+  Fa_all(i) = sqrt(Fa_u ^ 2 + Fa_v ^ 2);
+  Fo_all(i) = sqrt(Fo_u ^ 2 + Fo_v ^ 2);
+  Fc_all(i) = F_coriolis;
   
-  z = 4 - xx_;
+  z = 470 - xx_;
   z_all(i) = z;
 
-  if xx_>=0 && xx_<=30 && yy_>=0 && yy_<=40 
+  if xx_>=0 && xx_<=X_lim && yy_>=0 && yy_<=Y_lim 
       if abs(depth_icb_under) > abs(z)
           break
       end
@@ -176,6 +182,7 @@ plot(x_all(1:i),y_all(1:i),'*-');
 title('trajectory of iceberg');
 xlabel('xx(m)');
 ylabel('yy(m)');
+zlabel('depth(m)')
 
 subplot(2,2,4);
 plot(Fa_all(1:i-1),'-r.');

@@ -80,7 +80,6 @@ rho_h2o = 1028; % seawater density kg m-3
 % atmospheric velocity (at 10m)
 % the wind in the model will be given as wind stress -- do the conversion
 % tau_wind = rho_air*Cd*U^2 (tau_wind is sustr or svstr in model)
-
 sustr = 0.05; %newton meter-2
 svstr = 0.05;
 rho_air = 1.225; % air density kg m-3
@@ -129,10 +128,10 @@ for i=1:step
 % calculate velocity
   s_u = U*dt+0.5*au*dt^2;
   s_v = V*dt+0.5*av*dt^2;
-  x_all(i) = xx_;
-  y_all(i) = yy_;
   xx_ = xx_+s_u;
   yy_ = yy_+s_v;
+  x_all(i) = xx_;
+  y_all(i) = yy_;
   Fa_all(i) = sqrt(Fa2_u ^ 2 + Fa2_v ^ 2);
   Fo_all(i) = sqrt(Fo2_u ^ 2 + Fo2_v ^ 2);
   Fc_all(i) = Fcoriolis;
@@ -149,12 +148,13 @@ for i=1:step
   end
   
 % new velocity
-  U_all(i) = U;
-  V_all(i) = V;
+
   vel = sqrt(U^2+V^2);
   vel_all(i) = vel;
   U = U + au * dt;
-  V = V + av * dt;
+  V = V + av * dt;  
+  U_all(i) = U;
+  V_all(i) = V;
 end
 
 if abs(depth_icb_under) > abs(z)
