@@ -31,6 +31,12 @@ Y_lim = 1000;
 Z = 10 - X ;
 %Z = - (xx_,yy_);
 
+% indicate the initial location of the particle
+xx_ini = 50;
+yy_ini = 150;
+xx_ = xx_ini;
+yy_ = yy_ini;
+
 % set variable useful for the trajectory equation
 U = 0;
 V = 0;
@@ -59,13 +65,17 @@ Fc_all = zeros(1,step);
 vel_all = zeros(1,step);
 z_all = zeros(1,step);
 
+% coastal current
+uo_cst_surf = 0.0015 * 0.1 * yy_;
+vo_cst_surf = 0.0015 * 0.1 * yy_;
+
 % ocean velocity
 uo_cst_ans = 0;
 vo_cst_ans = 0;
 level = depth_icb_under / 1;
 for depth = 0:level
-uo_cst_ini = 0.1 - 0.005 * depth; % m/s
-vo_cst_ini = 0.1 - 0.005 * depth;
+uo_cst_ini = uo_cst_surf - 0.005 * depth; % m/s
+vo_cst_ini = vo_cst_surf - 0.005 * depth;
 
 uo_cst_ans = uo_cst_ans + uo_cst_ini;
 vo_cst_ans = vo_cst_ans + vo_cst_ini;
@@ -79,7 +89,6 @@ Co = 0.85; % dimensionless coefficient of resistance
 Cdo_skin = 0.0055; % ocean-iceberg friction coeff
 rho_h2o = 1028; % seawater density kg m-3
 
-
 % atmospheric velocity (at 10m)
 % the wind in the model will be given as wind stress -- do the conversion
 % tau_wind = rho_air*Cd*U^2 (tau_wind is sustr or svstr in model)
@@ -92,10 +101,6 @@ Cd = 1.25e-3;  % dimensionless air-sea friction coeff
 ua= sqrt(sustr / (rho_air * Cd)); % m s-2
 va= sqrt(svstr / (rho_air * Cd)); % m s-2
 
-% indicate the initial location of the particle
-xx_ini = 50;
-yy_ini = 150;
-
 % timestep
 dt = 60; % s
 
@@ -104,9 +109,6 @@ w_r = 7.2921e-5;
 f = - 2 * w_r * sin(67*pi/180);
 
 % do a loop    
-xx_ = xx_ini;
-yy_ = yy_ini;
-
 for i=1:step
     uv=sqrt(U^2+V^2);
    
