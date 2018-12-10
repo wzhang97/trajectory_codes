@@ -28,7 +28,7 @@ X_lim = 1000;
 Y_lim = 1000;
 [xx yy] = meshgrid([1:size(lat_rho,2)],[1:size(lon_rho,1)]); 
 [X,Y] = meshgrid([0:X_lim],[0:Y_lim]);
-Z = 10 - X ;
+Z = -300 + X ;
 %Z = - (xx_,yy_);
 
 % indicate the initial location of the particle
@@ -65,38 +65,21 @@ Fc_all = zeros(1,step);
 vel_all = zeros(1,step);
 z_all = zeros(1,step);
 
-% coastal current
-uo_cst_surf = 0.0015 * 0.1 * yy_;
-vo_cst_surf = 0.0015 * 0.1 * yy_;
-
-% ocean velocity
-uo_cst_ans = 0;
-vo_cst_ans = 0;
-level = depth_icb_under / 1;
-for depth = 0:level
-uo_cst_ini = uo_cst_surf - 0.005 * depth; % m/s
-vo_cst_ini = vo_cst_surf - 0.005 * depth;
-
-uo_cst_ans = uo_cst_ans + uo_cst_ini;
-vo_cst_ans = vo_cst_ans + vo_cst_ini;
-end
-% average ocean velocity
-uo_cst = uo_cst_ans / level;
-vo_cst = vo_cst_ans / level;
-
-% ocean coeff
+% oceanic coeff
 Co = 0.85; % dimensionless coefficient of resistance
 Cdo_skin = 0.0055; % ocean-iceberg friction coeff
 rho_h2o = 1028; % seawater density kg m-3
+
+% atmospheric coeff
+Ca = 0.4; % dimensionless coefficient of resistance
+Cda_skin = 0.0022; % air-iceberg friction coeff
+rho_air = 1.225; % air density kg m-3
 
 % atmospheric velocity (at 10m)
 % the wind in the model will be given as wind stress -- do the conversion
 % tau_wind = rho_air*Cd*U^2 (tau_wind is sustr or svstr in model)
 sustr = 0.05; %newton meter-2
 svstr = 0.05;
-rho_air = 1.225; % air density kg m-3
-Ca = 0.4; % dimensionless coefficient of resistance
-Cda_skin = 0.0022; % air-iceberg friction coeff
 Cd = 1.25e-3;  % dimensionless air-sea friction coeff
 ua= sqrt(sustr / (rho_air * Cd)); % m s-2
 va= sqrt(svstr / (rho_air * Cd)); % m s-2
@@ -111,7 +94,26 @@ f = - 2 * w_r * sin(67*pi/180);
 % do a loop    
 for i=1:step
     uv=sqrt(U^2+V^2);
-   
+    
+% coastal current
+    uo_cst_surf = 0.0015 * 0.1 * yy_;
+    vo_cst_surf = 0.0015 * 0.1 * yy_;
+
+% ocean velocity
+    uo_cst_ans = 0;
+    vo_cst_ans = 0;
+    level = depth_icb_under / 1;
+for depth = 0:level
+    uo_cst_ini = uo_cst_surf - 0.005 * depth; % m/s
+    vo_cst_ini = vo_cst_surf - 0.005 * depth;
+
+    uo_cst_ans = uo_cst_ans + uo_cst_ini;
+    vo_cst_ans = vo_cst_ans + vo_cst_ini;
+end
+% average ocean velocity
+    uo_cst = uo_cst_ans / level;
+    vo_cst = vo_cst_ans / level;
+
 % absolute values of relative velocities
         omid = sqrt((uo_cst - U) ^ 2 + (vo_cst - V) ^ 2);
         amid = sqrt((ua - U) ^ 2 + (va - V) ^ 2);
