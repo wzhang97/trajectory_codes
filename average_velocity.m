@@ -1,12 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%    Grounded model with average velocity
 %
-%    make a 2D grid and use the trajectory equations
-%    from T. Rackow to know where a particule is
-%    moving in the domain
-%
-%    First step into the iceberg trajectory model
-%
-%    Author: Eva C.
+%    Author: weiyan ZHANG
 %    Created: Oct 2018
 %    Updated:
 %    Last Modif by:
@@ -29,23 +24,31 @@ dx = ones(size(lat_rho,1),size(lat_rho,2));
 dy = ones(size(lat_rho,1),size(lat_rho,2));
 
 % Creates 2d grid of same size as model
+X_lim = 1000;
+Y_lim = 1000;
 [xx yy] = meshgrid([1:size(lat_rho,2)],[1:size(lon_rho,1)]); 
-[X,Y] = meshgrid([0:400],[0:400]);
-Z = -300 + X;
+[X,Y] = meshgrid([0:X_lim],[0:Y_lim]);
+Z = 10 - X ;
+%Z = - (xx_,yy_);
 
 % set variable useful for the trajectory equation
 U = 0;
 V = 0;
 
 % size of the iceberg
-depth_icb_under = 9; % m
-dA_o = 90; % m^2, ideally per face 
-dA_a = 10; % m^2 ideally per face
-Ad = 100;
-M = 9.167e5; % kg
-             % density is 916.7 kg m-3, volume of iceberg is 1000 m3
+depth = 10; % m
+depth_icb_under = 9;
+depth_icb_above = 1;
+lenth = 10;
+width = 10;
+dA_o = width * depth_icb_under; % m^2 ideally per face 
+dA_a = width * depth_icb_above; % m^2 ideally per face
+Ad = lenth * width;
+M = 916.7 * lenth * width * depth; % kg
+                                   % density is 916.7 kg m-3
              
 step = 500;
+time_all = zeros(1,step);
 U_all = zeros(1,step);
 V_all = zeros(1,step);
 x_all = zeros(1,step);
@@ -126,12 +129,15 @@ for i=1:step
         av = (-(-M * f * (U - uo_cst)) + Fa2_v + Fo2_v) / M;
                      
 % calculate velocity
+  time_all(i) = i/60;
   s_u = U*dt+0.5*au*dt^2;
   s_v = V*dt+0.5*av*dt^2;
-  xx_ = xx_+s_u;
-  yy_ = yy_+s_v;
   x_all(i) = xx_;
   y_all(i) = yy_;
+  U_all(i) = U;
+  V_all(i) = V;
+  vel = sqrt(U^2+V^2);
+  vel_all(i) = vel;
   Fa_all(i) = sqrt(Fa2_u ^ 2 + Fa2_v ^ 2);
   Fo_all(i) = sqrt(Fo2_u ^ 2 + Fo2_v ^ 2);
   Fc_all(i) = Fcoriolis;
@@ -148,13 +154,10 @@ for i=1:step
   end
   
 % new velocity
-
-  vel = sqrt(U^2+V^2);
-  vel_all(i) = vel;
   U = U + au * dt;
-  V = V + av * dt;  
-  U_all(i) = U;
-  V_all(i) = V;
+  V = V + av * dt; 
+  xx_ = xx_+s_u;
+  yy_ = yy_+s_v;
 end
 
 if abs(depth_icb_under) > abs(z)
