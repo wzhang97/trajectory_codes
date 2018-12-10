@@ -117,16 +117,16 @@ for i=1:step
         amid_skin = sqrt((ua - U) ^ 2 + (va - V) ^ 2);
 
 % Force due to Air
-        Fa2_u = rho_air * 0.5 * Ca * dA_a * amid * (ua - U) + rho_air * Cda_skin * Ad * amid_skin * (ua - U);
-        Fa2_v = rho_air * 0.5 * Ca * dA_a * amid * (va - U) +  rho_air * Cda_skin * Ad * amid_skin * (va - V);
+        Fa_u = rho_air * 0.5 * Ca * dA_a * amid * (ua - U) + rho_air * Cda_skin * Ad * amid_skin * (ua - U);
+        Fa_v = rho_air * 0.5 * Ca * dA_a * amid * (va - U) +  rho_air * Cda_skin * Ad * amid_skin * (va - V);
 
 % Force due to the Ocean
-        Fo2_u = rho_h2o * 0.5 * Co * dA_o * omid * (uo_cst - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (uo_cst - U);
-        Fo2_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst - V);
+        Fo_u = rho_h2o * 0.5 * Co * dA_o * omid * (uo_cst - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (uo_cst - U);
+        Fo_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst - V);
     
         Fcoriolis = sqrt((-M * f * (V - vo_cst))^2+(M * f * (U - uo_cst))^2);   
-        au = ((-M * f * (V - vo_cst)) + Fa2_u + Fo2_u) / M;
-        av = (-(-M * f * (U - uo_cst)) + Fa2_v + Fo2_v) / M;
+        au = ((-M * f * (V - vo_cst)) + Fa_u + Fo_u) / M;
+        av = (-(-M * f * (U - uo_cst)) + Fa_v + Fo_v) / M;
                      
 % calculate velocity
   time_all(i) = i/60;
@@ -138,14 +138,14 @@ for i=1:step
   V_all(i) = V;
   vel = sqrt(U^2+V^2);
   vel_all(i) = vel;
-  Fa_all(i) = sqrt(Fa2_u ^ 2 + Fa2_v ^ 2);
-  Fo_all(i) = sqrt(Fo2_u ^ 2 + Fo2_v ^ 2);
+  Fa_all(i) = sqrt(Fa_u ^ 2 + Fa_v ^ 2);
+  Fo_all(i) = sqrt(Fo_u ^ 2 + Fo_v ^ 2);
   Fc_all(i) = Fcoriolis;
   
   z = -300 + xx_;
   z_all(i) = z;
 
-  if xx_>=0 && xx_<=400 && yy_>=0 && yy_<=400 
+  if xx_>=0 && xx_<=X_lim && yy_>=0 && yy_<=Y_lim 
       if abs(depth_icb_under) > abs(z)
           break
       end
@@ -161,10 +161,10 @@ for i=1:step
 end
 
 if abs(depth_icb_under) > abs(z)
-    disp(['warning! ground when time = ',num2str(i-1),' min']);
+    disp(['warning! ground when time = ',num2str(time_all(i-1)),' h']);
     disp(['x = ',num2str(x_all(i-1)),' y = ',num2str(y_all(i-1))]);
 else
-    disp(['warning! out of domain when time = ',num2str(i-1),' min']);
+    disp(['warning! out of domain when time = ',num2str(time_all(i-1)),' h']);
     disp(['x = ',num2str(x_all(i-1)),' y = ',num2str(y_all(i-1))]);
 end
 
