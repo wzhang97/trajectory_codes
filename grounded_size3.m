@@ -58,28 +58,10 @@ Fo_all = zeros(1,step);
 Fc_all = zeros(1,step);
 vel_all = zeros(1,step);
 z_all = zeros(1,step);
-
-% ocean velocity (so far only in 1 direction and constant over the entire domain
-    
-for theta = 0:pi/step:pi
-uo_cst = sin(theta); % m/s
-vo_cst = sin(theta);
-Co = 0.85; % dimensionless coefficient of resistance
-Cdo_skin = 0.0055; % ocean-iceberg friction coeff
-rho_h2o = 1028; % seawater density kg m-3
-
-% atmospheric velocity (at 10m)
-% the wind in the model will be given as wind stress -- do the conversion
-% tau_wind = rho_air*Cd*U^2 (tau_wind is sustr or svstr in model)
-
-sustr = 0.05 * sin(theta); %newton meter-2
-svstr = 0.05 * sin(theta);
-rho_air = 1.225; % air density kg m-3
-Ca = 0.4; % dimensionless coefficient of resistance
-Cda_skin = 0.0022; % air-iceberg friction coeff
-Cd = 1.25e-3;  % dimensionless air-sea friction coeff
-ua= sqrt(sustr / (rho_air * Cd)); % m s-2
-va= sqrt(svstr / (rho_air * Cd)); % m s-2
+uo_cst_all = zeros(1,step);
+vo_cst_all = zeros(1,step);
+ua_all = zeros(1,step);
+va_all = zeros(1,step);
 
 % indicate the initial location of the particle
 xx_ini = 350;
@@ -88,7 +70,7 @@ yy_ini = 600;
 % timestep
 dt = 60; % s
 
-% force due CORIOLIS
+% coriolis coeff
 w_r = 7.2921e-5;
 f = - 2 * w_r * sin(67*pi/180);
 
@@ -97,7 +79,29 @@ xx_ = xx_ini;
 yy_ = yy_ini;
 
 for i=1:step
-    uv=sqrt(U^2+V^2);
+    
+    theta = (i/step) * pi;
+% ocean velocity
+    uo_cst = 0.1 * sin(theta); % m/s
+    vo_cst = 0.1 * sin(theta);
+    Co = 0.85; % dimensionless coefficient of resistance
+    Cdo_skin = 0.0055; % ocean-iceberg friction coeff
+    rho_h2o = 1028; % seawater density kg m-3
+
+% atmospheric velocity (at 10m)
+% the wind in the model will be given as wind stress -- do the conversion
+% tau_wind = rho_air*Cd*U^2 (tau_wind is sustr or svstr in model)
+
+    sustr = 0.05 * sin(theta); %newton meter-2
+    svstr = 0.05 * sin(theta);
+    rho_air = 1.225; % air density kg m-3
+    Ca = 0.4; % dimensionless coefficient of resistance
+    Cda_skin = 0.0022; % air-iceberg friction coeff
+    Cd = 1.25e-3;  % dimensionless air-sea friction coeff
+    ua = sqrt(sustr / (rho_air * Cd)); % m s-2
+    va = sqrt(svstr / (rho_air * Cd)); % m s-2
+
+    uv = sqrt(U ^ 2 + V ^ 2);
 
 % absolute values of relative velocities
         omid = sqrt((uo_cst - U) ^ 2 + (vo_cst - V) ^ 2);
@@ -131,6 +135,10 @@ for i=1:step
   Fa_all(i) = sqrt(Fa_u ^ 2 + Fa_v ^ 2);
   Fo_all(i) = sqrt(Fo_u ^ 2 + Fo_v ^ 2);
   Fc_all(i) = F_coriolis;
+  uo_cst_all(i) = uo_cst;
+  vo_cst_all(i) = vo_cst;
+  ua_all(i) = ua;
+  va_all(i) = va;
   
   z = 500 - xx_;
   z_all(i) = z;
@@ -149,7 +157,6 @@ for i=1:step
   xx_ = xx_ + s_u;
   yy_ = yy_ + s_v;
   
-end
 end
 
 if abs(depth_icb_under) > abs(z)
