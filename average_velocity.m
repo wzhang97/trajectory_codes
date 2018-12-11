@@ -64,6 +64,10 @@ Fo_all = zeros(1,step);
 Fc_all = zeros(1,step);
 vel_all = zeros(1,step);
 z_all = zeros(1,step);
+uo_cst_all = zeros(1,step);
+vo_cst_all = zeros(1,step);
+ua_all = zeros(1,step);
+va_all = zeros(1,step);
 
 % oceanic coeff
 Co = 0.85; % dimensionless coefficient of resistance
@@ -145,6 +149,10 @@ end
   Fa_all(i) = sqrt(Fa_u ^ 2 + Fa_v ^ 2);
   Fo_all(i) = sqrt(Fo_u ^ 2 + Fo_v ^ 2);
   Fc_all(i) = Fcoriolis;
+  uo_cst_all(i) = uo_cst;
+  vo_cst_all(i) = vo_cst;
+  ua_all(i) = ua;
+  va_all(i) = va;
   
   z = -300 + xx_;
   z_all(i) = z;
