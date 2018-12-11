@@ -70,7 +70,7 @@ yy_ini = 500;
 % timestep
 dt = 60; % s
 
-% force due CORIOLIS
+% coriolis coeff
 w_r = 7.2921e-5;
 f = - 2 * w_r * sin(67*pi/180);
 
