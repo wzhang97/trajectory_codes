@@ -24,11 +24,11 @@ dx = ones(size(lat_rho,1),size(lat_rho,2));
 dy = ones(size(lat_rho,1),size(lat_rho,2));
 
 % Creates 2d grid of same size as model
-X_lim = 1e3;
-Y_lim = 1e3;
+X_lim = 10000;
+Y_lim = 8000;
 [xx yy] = meshgrid([1:size(lat_rho,2)],[1:size(lon_rho,1)]); 
-[X,Y] = meshgrid([0:1e3],[0:1e3]);
-Z = 300 - X ;
+[X,Y] = meshgrid([0:X_lim],[0:Y_lim]);
+Z = 500 - X ;
 %Z = - (xx_,yy_);
 
 % set variable useful for the trajectory equation
