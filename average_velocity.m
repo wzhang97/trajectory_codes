@@ -98,7 +98,7 @@ for i=1:step
     for a = 1:step
     theta_y = (a/step) * 32 * pi;
 % coastal current
-    uo_cst_surf = 0.15 * sin(theta_y);
+    uo_cst_surf = 0.1 * sin(theta_y);
     vo_cst_surf = 0.15 * sin(theta_y);
     uo_cst_surf_all(a) = uo_cst_surf;
     vo_cst_surf_all(a) = vo_cst_surf;
@@ -132,7 +132,7 @@ end
 %    sustr = abs(0.05 * sin(theta)); %newton meter-2
 %    svstr = abs(0.05 * sin(theta));
     sustr=0.05;
-    svstr=0.05;
+    svstr=0.035;
     rho_air = 1.225; % air density kg m-3
     Ca = 0.4; % dimensionless coefficient of resistance
     Cda_skin = 0.0022; % air-iceberg friction coeff
@@ -157,17 +157,25 @@ for j = 1:step
 
 % Force due to Air
     Fa_u = rho_air * 0.5 * Ca * dA_a * amid * (ua_all(j) - U) + rho_air * Cda_skin * Ad * amid_skin * (ua_all(j) - U);
-    Fa_v = rho_air * 0.5 * Ca * dA_a * amid * (va_all(j) - U) +  rho_air * Cda_skin * Ad * amid_skin * (va_all(j) - V);
+    Fa_v = rho_air * 0.5 * Ca * dA_a * amid * (va_all(j) - V) +  rho_air * Cda_skin * Ad * amid_skin * (va_all(j) - V);
 
 % Force due to the Ocean
     Fo_u = rho_h2o * 0.5 * Co * dA_o * omid * (uo_cst_all(j) - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (uo_cst_all(j) - U);
-    Fo_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst_all(j) - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst_all(j) - V);
+    Fo_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst_all(j) - V) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst_all(j) - V);
 
 % Coriolis Force
     Fc_u = - (M * f * V);
     Fc_v = - M * f * U;
+    
+% Coriolis Force & Pressure Gradient Force
     Fcp_u = -(- M * f * (V - vo_cst_all(j)));
     Fcp_v = - M * f * (U - uo_cst_all(j));
+%{    
+% calculate acceleration
+    au = (Fc_u + Fa_u + Fo_u) / M;
+    av = (Fc_v + Fa_v + Fo_v) / M;  
+%}
+% calculate acceleration
     au = (Fcp_u + Fa_u + Fo_u) / M;
     av = (Fcp_v + Fa_v + Fo_v) / M;  
                          
