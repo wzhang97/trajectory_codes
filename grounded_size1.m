@@ -97,14 +97,14 @@ for i=1:step
     theta = (i/step) * 8 * pi;
 % ocean velocity
     uo_cst = 0.1 * sin(theta); % m/s
-    vo_cst = 0.1 * sin(theta);
+    vo_cst = 0.15 * sin(theta);
 
 % atmospheric velocity (at 10m)
 % the wind in the model will be given as wind stress -- do the conversion
 % tau_wind = rho_air*Cd*U^2 (tau_wind is sustr or svstr in model)
 
     sustr = abs(0.05 * sin(theta)); %newton meter-2
-    svstr = abs(0.05 * sin(theta));
+    svstr = abs(0.035 * sin(theta));
     ua = sqrt(sustr / (rho_air * Cd)); % m s-2
     va = sqrt(svstr / (rho_air * Cd)); % m s-2
     
@@ -125,20 +125,28 @@ for j = 1:step
 
 % Force due to the Atomasphere
     Fa_u = rho_air * 0.5 * Ca * dA_a * amid * (ua_all(j) - U) + rho_air * Cda_skin * Ad * amid_skin * (ua_all(j) - U);
-    Fa_v = rho_air * 0.5 * Ca * dA_a * amid * (va_all(j) - U) +  rho_air * Cda_skin * Ad * amid_skin * (va_all(j) - V);
+    Fa_v = rho_air * 0.5 * Ca * dA_a * amid * (va_all(j) - V) +  rho_air * Cda_skin * Ad * amid_skin * (va_all(j) - V);
 
 % Force due to the Ocean
     Fo_u = rho_h2o * 0.5 * Co * dA_o * omid * (uo_cst_all(j) - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (uo_cst_all(j) - U);
-    Fo_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst_all(j) - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst_all(j) - V);
+    Fo_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst_all(j) - V) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst_all(j) - V);
 
 % Coriolis Force
     Fc_u = - (M * f * V);
     Fc_v = - M * f * U;
+    
+% Coriolis Force & Pressure Gradient Force
     Fcp_u = -(- M * f * (V - vo_cst_all(j)));
     Fcp_v = - M * f * (U - uo_cst_all(j));
+%{    
+% calculate acceleration
+    au = (Fc_u + Fa_u + Fo_u) / M;
+    av = (Fc_v + Fa_v + Fo_v) / M;  
+%}
+% calculate acceleration
     au = (Fcp_u + Fa_u + Fo_u) / M;
     av = (Fcp_v + Fa_v + Fo_v) / M;  
-                         
+    
 % calculate velocity
   s_u = U * dt + 0.5 * au * dt ^ 2;
   s_v = V * dt + 0.5 * av * dt ^ 2;
@@ -161,7 +169,6 @@ for j = 1:step
   V = V + av * dt;
   xx_ = xx_ + s_u;
   yy_ = yy_ + s_v;
-  
 end
 
 for t = 1:step
