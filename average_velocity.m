@@ -20,7 +20,7 @@ dy = ones(size(lat_rho,1),size(lat_rho,2));
 %}
 
 %{
-% calculate dx, dy from model in m
+ calculate dx, dy from model in m
 pm = ncread(gname,'pm');
 pn = ncread(gname,'pn');
 dx = 1./pm;
@@ -127,8 +127,7 @@ end
 
 % atmospheric velocity (at 10m)
 % the wind in the model will be given as wind stress -- do the conversion
-% tau_wind = rho_air*Cd*U^2 (tau_wind is sustr or svstr in model)
-
+% tau_wind = rho_air*Cd*U^2 (tau_wind is sustr or svstr in model
 %    sustr = abs(0.05 * sin(theta)); %newton meter-2
 %    svstr = abs(0.05 * sin(theta));
     sustr=0.05;
@@ -147,8 +146,6 @@ end
 
 for j = 1:step
 
-    uv = sqrt(U ^ 2 + V ^ 2);
-
 % absolute values of relative velocities
     omid = sqrt((uo_cst_all(j) - U) ^ 2 + (vo_cst_all(j) - V) ^ 2);
     amid = sqrt((ua_all(j) - U) ^ 2 + (va_all(j) - V) ^ 2);
@@ -162,19 +159,11 @@ for j = 1:step
 % Force due to the Ocean
     Fo_u = rho_h2o * 0.5 * Co * dA_o * omid * (uo_cst_all(j) - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (uo_cst_all(j) - U);
     Fo_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst_all(j) - V) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst_all(j) - V);
-
-% Coriolis Force
-    Fc_u = - (M * f * V);
-    Fc_v = - M * f * U;
     
 % Coriolis Force & Pressure Gradient Force
     Fcp_u = -(- M * f * (V - vo_cst_all(j)));
     Fcp_v = - M * f * (U - uo_cst_all(j));
-%{    
-% calculate acceleration
-    au = (Fc_u + Fa_u + Fo_u) / M;
-    av = (Fc_v + Fa_v + Fo_v) / M;  
-%}
+
 % calculate acceleration
     au = (Fcp_u + Fa_u + Fo_u) / M;
     av = (Fcp_v + Fa_v + Fo_v) / M;  
@@ -239,7 +228,7 @@ xlabel('time(h)');
 ylabel('velocity(m/s)');
 
 subplot(2,2,3);
-%mesh(X,Y,Z);
+mesh(X,Y,Z);
 hold on;
 zlim([-50,0]);
 plot(x_all(1:t-1),y_all(1:t-1),'*-');
@@ -250,17 +239,15 @@ title('trajectory of iceberg');
 xlabel('xx(m)');
 ylabel('yy(m)');
 zlabel('depth(m)');
-%boxplot3(x_all(t)-5,y_all(t)-5,-depth_icb_under,lenth,width,depth);
+boxplot3(x_all(t)-5,y_all(t)-5,-depth_icb_under,lenth,width,depth);
 
 subplot(2,2,4);
 plot(time_all(1:t-1),Fa_all(1:t-1),'-r.');
 hold on;
 plot(time_all(1:t-1),Fo_all(1:t-1),'-b*');
 hold on;
-plot(time_all(1:t-1),Fc_all(1:t-1),'-y+');
-hold on;
-plot(time_all(1:t-1),Fcp_all(1:t-1),'-g+');
-legend('F_ atomas','F_ ocean','F_ coriolis','F_ pressure&coriolis');
+plot(time_all(1:t-1),Fcp_all(1:t-1),'-y+');
+legend('F_ atomas','F_ ocean','F_ pressure&coriolis');
 legend('boxoff');
 title('F - time');
 xlabel('time(h)');
