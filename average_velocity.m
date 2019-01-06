@@ -10,14 +10,16 @@
 clear all
 
 % load grid information from the model
-%{
-gname = 'C:\Users\61414\Downloads\misom020_grd.nc';
+gname = '/v_mertz/iceberg_project/ROMS_data/misom020_grd.nc';
+uname = '/v_mertz/iceberg_project/ROMS_data/uvel_small.nc';
+vname = '/v_mertz/iceberg_project/ROMS_data/vvel_small.nc';
 lat_rho = ncread(gname,'lat_rho');
 lon_rho = ncread(gname,'lon_rho');
+uo_read = ncread(uname,'u');
+vo_read = ncread(vname,'v');
 dx = ones(size(lat_rho,1),size(lat_rho,2));
 dy = ones(size(lat_rho,1),size(lat_rho,2));
 [xx yy] = meshgrid([1:size(lat_rho,2)],[1:size(lon_rho,1)]); 
-%}
 
 %{
  calculate dx, dy from model in m
