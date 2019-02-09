@@ -16,20 +16,21 @@ uname = '/v_mertz/iceberg_project/ROMS_data/uvel_small.nc';
 vname = '/v_mertz/iceberg_project/ROMS_data/vvel_small.nc';
 lat_rho = ncread(gname,'lat_rho'); % 96 * 120
 lon_rho = ncread(gname,'lon_rho');
-dx_rho = 1./ncread(gname,'pm'); % 96 * 120
-dy_rho = 1./ncread(gname,'pn');
-h = ncread(gname,'h'); % bathymetry at rho_points (96 * 120)
-zice = ncread(gname,'zice'); % ice draft at rho_points (96 * 120)
-depths_rho_read = calc_depths_rho(gname); % depths of each level (96 * 120 * 31)
-uo_read = ncread(uname,'u'); % meter second-1 (96x119x31x1456)
+x_rho = ncread(gname,'x_rho');
+y_rho = ncread(gname,'y_rho');
+[dx_rho,dy_rho,dz_rho] = calc_rhogrid_dxdydz(gname); % calcualte the length of each edges of a cell
+depths_rho = calc_depths_rho(gname); % depths of each level (96 * 120 * 31)
+mask_zice = ncread(gname,'mask_zice'); % mask on ice-shelf rho-points (option(0) = 'land', option(1) = 'water')
+mask_land = ncread(gname,'mask_rho'); % mask on RHO-points (option(0) = 'land', option(1) = 'water')
+uo_read = ncread(uname,'u'); % meter second-1 (95x119x31x1456)
 vo_read = ncread(vname,'v');
-sustr_read = ncread(uname,'sustr'); % newton meter-2 (96x119x1456) 
+sustr_read = ncread(uname,'sustr'); % newton meter-2 (95x119x1456) 
 svstr_read = ncread(vname,'svstr');
 [X,Y] = meshgrid([1:size(lat_rho,2)],[1:size(lon_rho,1)]);
 
 % indicate the initial location of the particle
-x_ini = 5;
-y_ini = 10;
+x_ini = 50;
+y_ini = 70;
 x = x_ini;
 y = y_ini;
 
@@ -50,21 +51,21 @@ Cd = 1.25e-3;  % dimensionless air-sea friction coeff
 
 % coriolis coeff
 w_r = 7.2921e-5;
-f = 2 * w_r * sin(-67*pi/180);
+f = 2 * w_r * sin(-67 * pi / 180);
     
 % size of the iceberg 
 rho_icb = 916.7; % kg m-3
 depth = 10; % m
 depth_icb_under = depth * (rho_icb / rho_h2o);
 depth_icb_above = depth - depth_icb_under;
-lenth = 10; % assume width is equal to lenth
-dA_o = lenth * depth_icb_under; % m^2 ideally per face 
-dA_a = lenth * depth_icb_above; % m^2 ideally per face
-Ad = lenth ^ 2;
-M = rho_icb * lenth ^ 2 * depth; % kg
+length = 4000; % assume width is equal to length
+dA_o = length * depth_icb_under; % m^2 ideally per face 
+dA_a = length * depth_icb_above; % m^2 ideally per face
+Ad = length ^ 2;
+M = rho_icb * length ^ 2 * depth; % kg
 
 % data set
-step = 2000;
+step = 1000;
 time_all = zeros(1,step);
 U_all = zeros(1,step);
 V_all = zeros(1,step);
@@ -82,75 +83,67 @@ ua_all = zeros(1,step);
 va_all = zeros(1,step);
 uo_cst_surf_all = zeros(1,step);
 vo_cst_surf_all = zeros(1,step);
-depths_rho = zeros(96,120,31);
 s_y = zeros(96,120);
 s_x = zeros(96,120);
 area_cell_ocean_u = zeros(96,120,31);
-area_cell_ocean_v = zeros(96,120,31); 
-sustr = zeros(96,120);
-sustr = zeros(96,120);
+area_cell_ocean_u = zeros(96,120,31);
+area_cell_bottom = zeros(96,120);
 area_cell_air_u = zeros(96,120);
-area_cell_air_u = zeros(96,120);
+area_cell_air_v = zeros(96,120);
 
 % timestep
 dt = 6 * 60 * 60; % s
 
-% create a new matrix of ocean velocity
-for XI = 1:95
-   for ETA = 1:119
-       uo_cst_rho(XI,ETA,:,:) = (uo_read(XI,ETA,:,:) + uo_read(XI+1,ETA,:,:)) / 2;
-       vo_cst_rho(XI,ETA,:,:) = (vo_read(XI,ETA,:,:) + vo_read(XI+1,ETA,:,:)) / 2;
-   end
+% create a new matrix of ocean velocity(94*119)
+for XI = 1:94
+    for ETA = 1:119
+        uo_cst_rho(XI,ETA,:,:) = (uo_read(XI,ETA,:,:) + uo_read(XI+1,ETA,:,:)) / 2;
+        vo_cst_rho(XI,ETA,:,:) = (vo_read(XI,ETA,:,:) + vo_read(XI+1,ETA,:,:)) / 2;
+    end
 end
 
 % do a loop
 for i = 1:step
 
 % position of iceberg
-    for c = 1:31
-        depths_rho(x,y,c) = depths_rho_read(x,y,c) + depths_rho(x,y,c);
-        if depth_icb_under < depths_rho(x,y,c)
-           break
-        end
-    end
-
-    for a = x:96
-        for b = y:120
-            s_y(a,b) = dy_rho(a,b) + s_y(a,b);
-            if length < s_y(a,b)
+    tmp_z = depths_rho(x,y,:);
+    [closest_diff_z, index_z] = min(abs((-tmp_z) - depth_icb_under)); % closest_diff is the difference between the bottom and the closest layer, index is the number of the closest layer
+    for index_x = x:96
+        for index_y = y:120
+            s_y(index_x,index_y) = dy_rho(index_x,index_y) + s_y(index_x,index_y);
+            if length < s_y(index_x,index_y)
                break
             end
         end
-        s_x(a,b) = dx_rho(a,b) + s_x(a,b);
-        if length < s_y(a,b)
+        s_x(index_x,index_y) = dx_rho(index_x,index_y) + s_x(index_x,index_y);
+        if length < s_y(index_x,index_y)
            break
         end
     end
-
-% area percentage under the ocean at u component
-    for b2 = y:(b-1)
-        for c2 = 1:(c-1)
-            area_cell_ocean_u(x,b2,c2) = dy_rho(x,b2) * depths_rho(x,b2,c2);
+% area percentage under the ocean at u component(side)
+    for b = y:index_y - 1
+        for c = 1:index_z
+            area_cell_ocean_u(x,b,c) = dy_rho(x,b) * dz_rho(x,b,c);
         end
     end
     area_total_ocean_u = sum(area_cell_ocean_u(x,:,:));
 
-% area percentage under the ocean at v component
-    for a2 = x:(a-1)
-        for c2 = 1:(c-1)
-            area_cell_ocean_v(a2,y,c2) = dy_rho(a2,y) * depths_rho(a2,y,c2);
+% area percentage under the ocean at v component(side)
+    for a2 = x:index_x - 1
+        for c2 = 1:index_z
+            area_cell_ocean_v(a2,y,c2) = dy_rho(a2,y) * dz_rho(a2,y,c2);
         end
     end
     area_total_ocean_v = sum(area_cell_ocean_u(:,y,:));
 
-% average ocean velocity
+% average ocean velocity on one side
     uo_average = 0; % meter second-1
     vo_average = 0;
-    for a3 = x:(a-1)
-        for b3 = y:(b-1)
-            for c3 = 1:(c-1)
-                uo_ini = uo_cst_rho(a3,b3,c3,step) * (area_cell_ocean_u(a3,b3,c3) / area_total_ocean_u);
-                vo_ini = vo_cst_rho(a3,b3,c3,step) * (area_cell_ocean_v(a3,b3,c3) / area_total_ocean_v);
+    for a3 = x:index_x - 1
+        for b3 = y:index_y - 1
+            for c3 = 1:index_z
+                uo_ini = uo_cst_rho(a3,b3,c3,i) * (area_cell_ocean_u(a3,b3,c3) / area_total_ocean_u);
+                vo_ini = vo_cst_rho(a3,b3,c3,i) * (area_cell_ocean_v(a3,b3,c3) / area_total_ocean_v);
                 uo_average = uo_average + uo_ini;
                 vo_average = vo_average + vo_ini;
             end
@@ -160,27 +153,51 @@ for i = 1:step
     uo_cst_all(i) = uo_average;
     vo_cst_all(i) = vo_average;
 
+% area percentage at the bottom
+    for a4 = x:index_x - 1
+        for b4 = y:index_y - 1
+            hrea_cell_bottom(a4,b4) = dx_rho(a4,b4) * dy_rho(a4,b4);
+
+        end
+    end
+    area_total_bottom = sum(area_cell_bottom(:,:));
+
+% average ocean velocity at bottom
+    uo_bottom_average = 0; % meter second-1
+    vo_bottom_average = 0;
+    for a5 = x:index_x - 1
+        for b5 = y:index_y - 1
+            uo_bottom_ini = uo_cst_rho(a5,b5,index_z,i) * (area_cell_bottom(a5,b5) / area_total_bottom);
+            vo_bottom_ini = vo_cst_rho(a5,b5,index_z,i) * (area_cell_bottom(a5,b5) / area_total_bottom);
+            uo_bottom_average = uo_bottom_average + uo_bottom_ini;
+            vo_bottom_average = vo_bottom_average + vo_bottom_ini;
+        end
+    end
+
+    uo_skin_all(i) = uo_bottom_average;
+    vo_skin_all(i) = vo_bottom_average;
+
 % ua = sqrt(sustr(x,y,step) / (rho_air * Cd)); m s-2
 
 % area percentage above the ocean at u component
-    for b4 = y:(b-1)
-        area_cell_air_u(x,b4) = dy_rho(x,b4) * depth_icb_above;
+    for b6 = y:index_y - 1
+        area_cell_air_u(x,b6) = dy_rho(x,b6) * depth_icb_above;
     end
     area_total_air_u = sum(area_cell_air_u(x,:));
 
 % area percentage above the ocean at v component
-    for a4 = x:(a-1)
-        area_cell_air_v(a4,y) = dy_rho(a4,y) * depth_icb_above;
+    for a7 = x:index_x - 1
+        area_cell_air_v(a7,y) = dy_rho(a7,y) * depth_icb_above;
     end
-    area_total_air_v = sum(area_cell_air_u(:,y));
+    area_total_air_v = sum(area_cell_air_v(:,y));
 
-% average atmospheric velocity
+% average atmospheric velocity(side)
     ua_average = 0; % meter second-1
     va_average = 0;
-    for a5 = x:(a-1)
-        for b5 = y:(b-1)
-            ua_ini = sqrt(sustr_read(x,y,step) / (rho_air * Cd)) * (area_cell_air_u(a5,b5) / area_total_air_u);
-            va_ini = sqrt(sustr_read(x,y,step) / (rho_air * Cd)) * (area_cell_air_v(a5,b5) / area_total_air_v);
+    for a8 = x:index_x - 1
+        for b8 = y:index_y - 1
+            ua_ini = sqrt(sustr_read(a8,b8,i) / (rho_air * Cd)) * (area_cell_air_u(a8,b8) / area_total_air_u);
+            va_ini = sqrt(sustr_read(a8,b8,i) / (rho_air * Cd)) * (area_cell_air_v(a8,b8) / area_total_air_v);
             ua_average = ua_average + ua_ini;
             va_average = va_average + va_ini;
         end
@@ -188,7 +205,22 @@ for i = 1:step
     ua_all(i) = ua_average;
     va_all(i) = va_average;
 
-    time_all(i) = i / (60 * 60);
+% average ocean velocity at top
+    ua_top_average = 0; % meter second-1
+    va_top_average = 0;
+    for a9 = x:index_x - 1
+        for b9 = y:index_y - 1
+            ua_top_ini = sqrt(sustr_read(a9,b9,i) / (rho_air * Cd)) * (area_cell_bottom(a9,b9) / area_total_bottom);
+            va_top_ini = sqrt(sustr_read(a9,b9,i) / (rho_air * Cd)) * (area_cell_bottom(a9,b9) / area_total_bottom);
+            ua_top_average = ua_top_average + ua_top_ini;
+            va_top_average = va_top_average + va_top_ini;
+        end
+    end
+
+    ua_skin_all(i) = ua_top_average;
+    va_skin_all(i) = va_top_average;
+
+    time_all(i) = 6 * i;
 end
 
 for j = 1:step
@@ -196,12 +228,12 @@ for j = 1:step
 % absolute values of relative velocities
     omid = sqrt((uo_cst_all(j) - U) ^ 2 + (vo_cst_all(j) - V) ^ 2);
     amid = sqrt((ua_all(j) - U) ^ 2 + (va_all(j) - V) ^ 2);
-    omid_skin = sqrt((uo_cst_all(j) - U) ^ 2 + (vo_cst_all(j) - V) ^ 2);
-    amid_skin = sqrt((ua_all(j) - U) ^ 2 + (va_all(j) - V) ^ 2);
+    omid_skin = sqrt((uo_skin_all(j) - U) ^ 2 + (vo_skin_all(j) - V) ^ 2);
+    amid_skin = sqrt((ua_skin_all(j) - U) ^ 2 + (va_skin_all(j) - V) ^ 2);
 
 % Force due to Air
     Fa_u = rho_air * 0.5 * Ca * dA_a * amid * (ua_all(j) - U) + rho_air * Cda_skin * Ad * amid_skin * (ua_all(j) - U);
-    Fa_v = rho_air * 0.5 * Ca * dA_a * amid * (va_all(j) - V) +  rho_air * Cda_skin * Ad * amid_skin * (va_all(j) - V);
+    Fa_v = rho_air * 0.5 * Ca * dA_a * amid * (va_all(j) - V) + rho_air * Cda_skin * Ad * amid_skin * (va_all(j) - V);
 
 % Force due to the Ocean
     Fo_u = rho_h2o * 0.5 * Co * dA_o * omid * (uo_cst_all(j) - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (uo_cst_all(j) - U);
@@ -239,19 +271,23 @@ end
 
 for t = 1:step
     if x_all(t)>=0 && x_all(t)<=X_lim && y_all(t)>=0 && y_all(t)<=Y_lim 
-       if depth_icb_under > abs(depths_rho(a,b,c))
-          break
+       if mask_zice(x,y) == 1 && mask_land == 1
+          if depth_icb_under > abs(depths_rho(index_x,index_y,index_z))
+             break
+          end
+       else
+           break
        end
     else
         break
     end
-end 
+end
 
 if depth_icb_under > abs(depths_rho(a,b,c))
     disp(['warning! ground when time = ',num2str(time_all(t-1)),' h']);
     disp(['x = ',num2str(x_all(t-1)),' y = ',num2str(y_all(t-1))]);
 else
-    disp(['warning! out of domain when time = ',num2str(time_all(t-1)),' h']);
+    disp(['warning! stop moving when time = ',num2str(time_all(t-1)),' h']);
     disp(['x = ',num2str(x_all(t-1)),' y = ',num2str(y_all(t-1))]);
 end
 
