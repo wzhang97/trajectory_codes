@@ -27,12 +27,16 @@ vo_read = ncread(vname,'v');
 sustr_read = ncread(uname,'sustr'); % newton meter-2 (95x119x1456) 
 svstr_read = ncread(vname,'svstr');
 [X,Y] = meshgrid([1:size(lat_rho,2)],[1:size(lon_rho,1)]);
+X_lim = x_rho(96,120);
+Y_lim = y_rho(96,120);
 
 % indicate the initial location of the particle
-x_ini = 50;
-y_ini = 70;
+x_ini = 60;
+y_ini = 80;
 x = x_ini;
 y = y_ini;
+xx = x_rho(x,y);
+yy = y_rho(x,y);
 
 % set variable useful for the trajectory equation
 U = 0;
@@ -58,22 +62,23 @@ rho_icb = 916.7; % kg m-3
 depth = 10; % m
 depth_icb_under = depth * (rho_icb / rho_h2o);
 depth_icb_above = depth - depth_icb_under;
-length = 4000; % assume width is equal to length
+length = 5000; % assume width is equal to length
 dA_o = length * depth_icb_under; % m^2 ideally per face 
 dA_a = length * depth_icb_above; % m^2 ideally per face
 Ad = length ^ 2;
 M = rho_icb * length ^ 2 * depth; % kg
 
 % data set
-step = 1000;
+step = 500;
 time_all = zeros(1,step);
 U_all = zeros(1,step);
 V_all = zeros(1,step);
 x_all = zeros(1,step);
 y_all = zeros(1,step);
+xx_all = zeros(1,step);
+yy_all = zeros(1,step);
 Fa_all = zeros(1,step);
 Fo_all = zeros(1,step);
-Fc_all = zeros(1,step);
 Fcp_all = zeros(1,step);
 vel_all = zeros(1,step);
 z_all = zeros(1,step);
@@ -86,7 +91,7 @@ vo_cst_surf_all = zeros(1,step);
 s_y = zeros(96,120);
 s_x = zeros(96,120);
 area_cell_ocean_u = zeros(96,120,31);
-area_cell_ocean_u = zeros(96,120,31);
+area_cell_ocean_v = zeros(96,120,31);
 area_cell_bottom = zeros(96,120);
 area_cell_air_u = zeros(96,120);
 area_cell_air_v = zeros(96,120);
@@ -108,25 +113,30 @@ for i = 1:step
 % position of iceberg
     tmp_z = depths_rho(x,y,:);
     [closest_diff_z, index_z] = min(abs((-tmp_z) - depth_icb_under)); % closest_diff is the difference between the bottom and the closest layer, index is the number of the closest layer
-    for index_x = x:96
-        for index_y = y:120
-            s_y(index_x,index_y) = dy_rho(index_x,index_y) + s_y(index_x,index_y);
-            if length < s_y(index_x,index_y)
-               break
-            end
-        end
-        s_x(index_x,index_y) = dx_rho(index_x,index_y) + s_x(index_x,index_y);
-        if length < s_y(index_x,index_y)
+    icb_x = 0;
+    icb_y = 0;
+    for index_x = x:95        
+        icb_x = dx_rho(index_x,y) + icb_x;
+        if length < icb_x
            break
         end
     end
+    for index_y = y:120
+        icb_y = dy_rho(index_x,index_y) + icb_y;
+        if length < icb_y
+           break
+        end
+    end
+    s_x(index_x,index_y) = icb_x;
+    s_y(index_x,index_y) = icb_y;
 % area percentage under the ocean at u component(side)
     for b = y:index_y - 1
         for c = 1:index_z
             area_cell_ocean_u(x,b,c) = dy_rho(x,b) * dz_rho(x,b,c);
         end
     end
-    area_total_ocean_u = sum(area_cell_ocean_u(x,:,:));
+    area_total_ocean_u_1 = sum(area_cell_ocean_u(x,:,:));
+    area_total_ocean_u = sum(area_total_ocean_u_1);
 
 % area percentage under the ocean at v component(side)
     for a2 = x:index_x - 1
@@ -134,16 +144,17 @@ for i = 1:step
             area_cell_ocean_v(a2,y,c2) = dy_rho(a2,y) * dz_rho(a2,y,c2);
         end
     end
-    area_total_ocean_v = sum(area_cell_ocean_u(:,y,:));
+    area_total_ocean_v_1 = sum(area_cell_ocean_v(:,y,:));
+    area_total_ocean_v = sum(area_total_ocean_v_1);
 
 % average ocean velocity on one side
     uo_average = 0; % meter second-1
     vo_average = 0;
     for a3 = x:index_x - 1
         for b3 = y:index_y - 1
-            for c3 = 1:index_z
-                uo_ini = uo_cst_rho(a3,b3,c3,i) * (area_cell_ocean_u(a3,b3,c3) / area_total_ocean_u);
-                vo_ini = vo_cst_rho(a3,b3,c3,i) * (area_cell_ocean_v(a3,b3,c3) / area_total_ocean_v);
+            for c3 = 1:index_z                
+                uo_ini = abs(uo_cst_rho(a3,b3,c3,i)) * (area_cell_ocean_u(a3,b3,c3) / area_total_ocean_u);
+                vo_ini = abs(vo_cst_rho(a3,b3,c3,i)) * (area_cell_ocean_v(a3,b3,c3) / area_total_ocean_v);
                 uo_average = uo_average + uo_ini;
                 vo_average = vo_average + vo_ini;
             end
@@ -156,19 +167,20 @@ for i = 1:step
 % area percentage at the bottom
     for a4 = x:index_x - 1
         for b4 = y:index_y - 1
-            hrea_cell_bottom(a4,b4) = dx_rho(a4,b4) * dy_rho(a4,b4);
+            area_cell_bottom(a4,b4) = dx_rho(a4,b4) * dy_rho(a4,b4);
 
         end
     end
-    area_total_bottom = sum(area_cell_bottom(:,:));
+    area_total_bottom_1 = sum(area_cell_bottom);
+    area_total_bottom = sum(area_total_bottom_1);
 
 % average ocean velocity at bottom
     uo_bottom_average = 0; % meter second-1
     vo_bottom_average = 0;
     for a5 = x:index_x - 1
         for b5 = y:index_y - 1
-            uo_bottom_ini = uo_cst_rho(a5,b5,index_z,i) * (area_cell_bottom(a5,b5) / area_total_bottom);
-            vo_bottom_ini = vo_cst_rho(a5,b5,index_z,i) * (area_cell_bottom(a5,b5) / area_total_bottom);
+            uo_bottom_ini = abs(uo_cst_rho(a5,b5,index_z,i)) * (area_cell_bottom(a5,b5) / area_total_bottom);
+            vo_bottom_ini = abs(vo_cst_rho(a5,b5,index_z,i)) * (area_cell_bottom(a5,b5) / area_total_bottom);
             uo_bottom_average = uo_bottom_average + uo_bottom_ini;
             vo_bottom_average = vo_bottom_average + vo_bottom_ini;
         end
@@ -196,8 +208,8 @@ for i = 1:step
     va_average = 0;
     for a8 = x:index_x - 1
         for b8 = y:index_y - 1
-            ua_ini = sqrt(sustr_read(a8,b8,i) / (rho_air * Cd)) * (area_cell_air_u(a8,b8) / area_total_air_u);
-            va_ini = sqrt(sustr_read(a8,b8,i) / (rho_air * Cd)) * (area_cell_air_v(a8,b8) / area_total_air_v);
+            ua_ini = sqrt(abs(sustr_read(a8,b8,i)) / (rho_air * Cd)) * (area_cell_air_u(a8,b8) / area_total_air_u);
+            va_ini = sqrt(abs(sustr_read(a8,b8,i)) / (rho_air * Cd)) * (area_cell_air_v(a8,b8) / area_total_air_v);
             ua_average = ua_average + ua_ini;
             va_average = va_average + va_ini;
         end
@@ -210,8 +222,8 @@ for i = 1:step
     va_top_average = 0;
     for a9 = x:index_x - 1
         for b9 = y:index_y - 1
-            ua_top_ini = sqrt(sustr_read(a9,b9,i) / (rho_air * Cd)) * (area_cell_bottom(a9,b9) / area_total_bottom);
-            va_top_ini = sqrt(sustr_read(a9,b9,i) / (rho_air * Cd)) * (area_cell_bottom(a9,b9) / area_total_bottom);
+            ua_top_ini = sqrt(abs(sustr_read(a9,b9,i)) / (rho_air * Cd)) * (area_cell_bottom(a9,b9) / area_total_bottom);
+            va_top_ini = sqrt(abs(sustr_read(a9,b9,i)) / (rho_air * Cd)) * (area_cell_bottom(a9,b9) / area_total_bottom);
             ua_top_average = ua_top_average + ua_top_ini;
             va_top_average = va_top_average + va_top_ini;
         end
@@ -220,7 +232,7 @@ for i = 1:step
     ua_skin_all(i) = ua_top_average;
     va_skin_all(i) = va_top_average;
 
-    time_all(i) = 6 * i;
+    time_all(i) = 6 * (i - 1);
 end
 
 for j = 1:step
@@ -252,26 +264,37 @@ for j = 1:step
   s_v = V * dt + 0.5 * av * dt ^ 2;
   x_all(j) = x;
   y_all(j) = y;
+  xx_all(j) = xx;
+  yy_all(j) = yy;
   U_all(j) = U;
   V_all(j) = V;
   vel = sqrt(U ^ 2 + V ^ 2);
   vel_all(j) = vel;
   Fa_all(j) = sqrt(Fa_u ^ 2 + Fa_v ^ 2);
   Fo_all(j) = sqrt(Fo_u ^ 2 + Fo_v ^ 2);
-  Fc_all(j) = sqrt(Fc_u ^ 2 + Fc_v ^ 2);
   Fcp_all(j) = sqrt(Fcp_u ^ 2 + Fcp_v ^ 2);
     
 % new velocity & location
   U = U + au * dt;
   V = V + av * dt;
-  x = x + s_u;
-  y = y + s_v;
+  xx = xx + s_u;
+  yy = yy + s_v;
+  if xx > x_rho(x,y)
+     x_all(i) = x + 1;
+  else
+      x_all(i) = x;
+  end
+  if yy > y_rho(x,y)
+     y_all(i) = y + 1;
+  else
+      y_all(i) = y;
+  end
 
 end
 
 for t = 1:step
-    if x_all(t)>=0 && x_all(t)<=X_lim && y_all(t)>=0 && y_all(t)<=Y_lim 
-       if mask_zice(x,y) == 1 && mask_land == 1
+    if xx_all(t)>=0 && xx_all(t)<=X_lim && yy_all(t)>=0 && yy_all(t)<=Y_lim 
+       if mask_zice(x_all(t),y_all(t)) == 0 && mask_land(x_all(t),y_all(t)) == 1
           if depth_icb_under > abs(depths_rho(index_x,index_y,index_z))
              break
           end
@@ -283,12 +306,12 @@ for t = 1:step
     end
 end
 
-if depth_icb_under > abs(depths_rho(a,b,c))
+if depth_icb_under > abs(depths_rho(index_x,index_y,index_z))
     disp(['warning! ground when time = ',num2str(time_all(t-1)),' h']);
-    disp(['x = ',num2str(x_all(t-1)),' y = ',num2str(y_all(t-1))]);
+    disp(['x = ',num2str(xx_all(t-1)),' y = ',num2str(yy_all(t-1))]);
 else
     disp(['warning! stop moving when time = ',num2str(time_all(t-1)),' h']);
-    disp(['x = ',num2str(x_all(t-1)),' y = ',num2str(y_all(t-1))]);
+    disp(['x = ',num2str(xx_all(t-1)),' y = ',num2str(yy_all(t-1))]);
 end
 
 subplot(2,2,1);
@@ -308,18 +331,14 @@ xlabel('time(h)');
 ylabel('velocity(m/s)');
 
 subplot(2,2,3);
-mesh(X,Y,Z);
-hold on;
-zlim([-50,0]);
-plot(x_all(1:t-1),y_all(1:t-1),'*-');
+plot(xx_all(1:t-1),yy_all(1:t-1),'*-');
 grid;
 hold on;
-plot(x_all(1),y_all(1),'ro');
+plot(xx_all(1),yy_all(1),'ro');
 title('trajectory of iceberg');
 xlabel('xx(m)');
 ylabel('yy(m)');
-zlabel('depth(m)');
-boxplot3(x_all(t)-5,y_all(t)-5,-depth_icb_under,lenth,width,depth);
+% boxplot3(x_all(t)-5,y_all(t)-5,-depth_icb_under,length,length,depth);
 
 subplot(2,2,4);
 plot(time_all(1:t-1),Fa_all(1:t-1),'-r.');
@@ -332,20 +351,5 @@ legend('boxoff');
 title('F - time');
 xlabel('time(h)');
 ylabel('force(N)');
-
-%{
-figure, mesh(X,Y,Z);
-hold on;
-zlim([-50,5]);
-plot(x_all(1:t-1),y_all(1:t-1),'*-');
-grid;
-hold on;
-plot(x_all(1),y_all(1),'ro');
-title('trajectory of iceberg');
-xlabel('xx(m)');
-ylabel('yy(m)');
-zlabel('depth(m)');
-boxplot3(x_all(t)-5,y_all(t)-5,-depth_icb_under,lenth,width,depth);
-%}
 
 % check if within the domain
