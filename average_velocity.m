@@ -153,8 +153,8 @@ for i = 1:step
     for a3 = x:index_x - 1
         for b3 = y:index_y - 1
             for c3 = 1:index_z                
-                uo_ini = abs(uo_cst_rho(a3,b3,c3,i)) * (area_cell_ocean_u(a3,b3,c3) / area_total_ocean_u);
-                vo_ini = abs(vo_cst_rho(a3,b3,c3,i)) * (area_cell_ocean_v(a3,b3,c3) / area_total_ocean_v);
+                uo_ini = uo_cst_rho(a3,b3,c3,i) * (area_cell_ocean_u(a3,b3,c3) / area_total_ocean_u);
+                vo_ini = vo_cst_rho(a3,b3,c3,i) * (area_cell_ocean_v(a3,b3,c3) / area_total_ocean_v);
                 uo_average = uo_average + uo_ini;
                 vo_average = vo_average + vo_ini;
             end
@@ -179,8 +179,8 @@ for i = 1:step
     vo_bottom_average = 0;
     for a5 = x:index_x - 1
         for b5 = y:index_y - 1
-            uo_bottom_ini = abs(uo_cst_rho(a5,b5,index_z,i)) * (area_cell_bottom(a5,b5) / area_total_bottom);
-            vo_bottom_ini = abs(vo_cst_rho(a5,b5,index_z,i)) * (area_cell_bottom(a5,b5) / area_total_bottom);
+            uo_bottom_ini = uo_cst_rho(a5,b5,index_z,i) * (area_cell_bottom(a5,b5) / area_total_bottom);
+            vo_bottom_ini = vo_cst_rho(a5,b5,index_z,i) * (area_cell_bottom(a5,b5) / area_total_bottom);
             uo_bottom_average = uo_bottom_average + uo_bottom_ini;
             vo_bottom_average = vo_bottom_average + vo_bottom_ini;
         end
