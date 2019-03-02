@@ -29,15 +29,16 @@ vo_read = ncread(vname,'v');
 sustr_read = ncread(uname,'sustr'); % newton meter-2 (95x120x1456) 
 svstr_read = ncread(vname,'svstr'); % (96x119x1456)
 Cs_r = ncread(strname,'Cs_r');
-[u_rho,v_rho] = velocity2rho(gname,depths_rho,uo_read,vo_read,0); % calculate velocities on rho-grid
+%[u_rho,v_rho] = velocity2rho(gname,depths_rho,uo_read,vo_read,0); % calculate velocities on rho-grid
+load /v_mertz/iceberg_project/wzhang/trajectory_codes/vel_rho.mat;
 [X,Y] = meshgrid([1:size(x_rho,2)],[1:size(y_rho,1)]);
 uo_cst_rho = u_rho;
 vo_cst_rho = v_rho;
 end_layer = length(Cs_r);
 
 % indicate the initial location of the particle
-x_ini = 60;
-y_ini = 80;
+x_ini = 70;
+y_ini = 100;
 x = x_ini;
 y = y_ini;
 xx = x_rho(x,y);
@@ -64,17 +65,17 @@ f = 2 * w_r * sin(-67 * pi / 180);
     
 % size of the iceberg 
 rho_icb = 850; % kg m-3
-depth = 150; % m
+depth = 100; % m
 depth_icb_under = depth * (rho_icb / rho_h2o);
 depth_icb_above = depth - depth_icb_under;
-len = 5000; % assume width is equal to length
+len = 4000; % assume width is equal to length
 dA_o = len * depth_icb_under; % m^2 ideally per face 
 dA_a = len * depth_icb_above; % m^2 ideally per face
 Ad = len ^ 2;
 M = rho_icb * len ^ 2 * depth; % kg
 
 % data set
-step = 500;
+step = 100;
 time_all = zeros(1,step);
 U_all = zeros(1,step);
 V_all = zeros(1,step);
@@ -90,20 +91,19 @@ uo_cst_all = zeros(1,step);
 vo_cst_all = zeros(1,step);
 ua_all = zeros(1,step);
 va_all = zeros(1,step);
-uo_cst_surf_all = zeros(1,step);
-vo_cst_surf_all = zeros(1,step);
 au_all = zeros(1,step);
 av_all = zeros(1,step);
 uo_skin_all = zeros(1,step);
 vo_skin_all = zeros(1,step);
-s_y = zeros(96,120);
-s_x = zeros(96,120);
+ua_skin_all = zeros(1,step);
+va_skin_all = zeros(1,step);
 
 % timestep
 dt = 6 * 60 * 60; % s
 
 % create a new matrix of wind velocity 
 % ua = sqrt(sustr(x,y,step) / (rho_air * Cd)); m s-2
+%{
 for XI = 1:94 
     for ETA = 1:120
         sustr_rho(XI,ETA,:) = 0.5 .* (sustr_read(XI,ETA,:) + sustr_read(XI+1,ETA,:));
@@ -117,7 +117,7 @@ for XI = 1:96
         v_wind = sign(svstr_rho) .* sqrt(abs(svstr_rho) / (rho_air * Cd));
     end
 end
-
+%}
 % do a loop
 for i = 1:step
 
@@ -211,26 +211,28 @@ for i = 1:step
     time_all(i) = 6 * (i - 1);
 
 % absolute values of relative velocities
-    omid = sqrt((uo_cst_all(i) - U) ^ 2 + (vo_cst_all(i) - V) ^ 2);
-    amid = sqrt((ua_all(i) - U) ^ 2 + (va_all(i) - V) ^ 2);
-    omid_skin = sqrt((uo_skin_all(i) - U) ^ 2 + (vo_skin_all(i) - V) ^ 2);
-    amid_skin = sqrt((ua_skin_all(i) - U) ^ 2 + (va_skin_all(i) - V) ^ 2);
+    omib = sqrt((uo_cst_all(i) - U) ^ 2 + (vo_cst_all(i) - V) ^ 2);
+    amib = sqrt((ua_all(i) - U) ^ 2 + (va_all(i) - V) ^ 2);
+    omib_skin = sqrt((uo_skin_all(i) - U) ^ 2 + (vo_skin_all(i) - V) ^ 2);
+    amib_skin = sqrt((ua_skin_all(i) - U) ^ 2 + (va_skin_all(i) - V) ^ 2);
 
 % Force due to Air
-    Fa_u = rho_air * 0.5 * Ca * dA_a * amid * (ua_all(i) - U) + rho_air * Cda_skin * Ad * amid_skin * (ua_all(i) - U);
-    Fa_v = rho_air * 0.5 * Ca * dA_a * amid * (va_all(i) - V) + rho_air * Cda_skin * Ad * amid_skin * (va_all(i) - V);
+    Fa_u = rho_air * 0.5 * Ca * dA_a * amib * (ua_all(i) - U) + rho_air * Cda_skin * Ad * amib * (ua_all(i) - U);
+    Fa_v = rho_air * 0.5 * Ca * dA_a * amib * (va_all(i) - V) + rho_air * Cda_skin * Ad * amib * (va_all(i) - V);
 
 % Force due to the Ocean
-    Fo_u = rho_h2o * 0.5 * Co * dA_o * omid * (uo_cst_all(i) - U) + rho_h2o * Cdo_skin * Ad * omid_skin * (uo_cst_all(i) - U);
-    Fo_v = rho_h2o * 0.5 * Co * dA_o * omid * (vo_cst_all(i) - V) + rho_h2o * Cdo_skin * Ad * omid_skin * (vo_cst_all(i) - V);
-    
+%    Fo_u = rho_h2o * 0.5 * Co * dA_o * omib * (uo_cst_all(i) - U) + rho_h2o * Cdo_skin * Ad * omib_skin * (uo_cst_all(i) - U);
+%    Fo_v = rho_h2o * 0.5 * Co * dA_o * omib * (vo_cst_all(i) - V) + rho_h2o * Cdo_skin * Ad * omib_skin * (vo_cst_all(i) - V);
+    Fo_u = rho_h2o * 0.5 * Co * dA_o * omib * uo_cst_all(i) + rho_h2o * Cdo_skin * Ad * omib_skin * uo_skin_all(i);
+    Fo_v = rho_h2o * 0.5 * Co * dA_o * omib * vo_cst_all(i) + rho_h2o * Cdo_skin * Ad * omib_skin * vo_skin_all(i);
+
 % Coriolis Force & Pressure Gradient Force
     Fcp_u = -(- M * f * (V - vo_cst_all(i)));
     Fcp_v = - M * f * (U - uo_cst_all(i));
 
 % calculate acceleration
     au = (Fcp_u + Fa_u + Fo_u) / M;
-    av = (Fcp_v + Fa_v + Fo_v) / M;  
+    av = (Fcp_v + Fa_v + Fo_v) / M; 
     au_all(i) = au;
     av_all(i) = av;
 % calculate velocity
@@ -238,6 +240,8 @@ for i = 1:step
     s_v = V * dt + 0.5 * av * dt ^ 2;
     xx_all(i) = xx;
     yy_all(i) = yy;
+    x_all(i) = x;
+    y_all(i) = y;
     U_all(i) = U;
     V_all(i) = V;
     vel = sqrt(U ^ 2 + V ^ 2);
