@@ -17,8 +17,8 @@ vname = '/v_mertz/iceberg_project/ROMS_data/vvel_small.nc';
 strname = '/ds/projects/mertz/mdl/misom020_2/mer_his_0001.nc';
 lat_rho = ncread(gname,'lat_rho'); % 96 * 120
 lon_rho = ncread(gname,'lon_rho');
-x_rho = ncread(gname,'x_rho');
-y_rho = ncread(gname,'y_rho');
+x_rho = ncread(gname,'x_rho',[1 1],[94 118]);
+y_rho = ncread(gname,'y_rho',[1 1],[94 118]);
 [dx_rho,dy_rho,dz_rho] = calc_rhogrid_dxdydz(gname); % calcualte the length of each edges of a cell
 depths_rho = calc_depths_rho(gname); % depths of each level (96 * 120 * 31)
 bathy = ncread(gname,'h');
@@ -37,8 +37,8 @@ vo_cst_rho = v_rho;
 end_layer = length(Cs_r);
 
 % indicate the initial location of the particle
-x_ini = 70;
-y_ini = 100;
+x_ini = 40;
+y_ini = 60;
 x = x_ini;
 y = y_ini;
 xx = x_rho(x,y);
@@ -75,7 +75,7 @@ Ad = len ^ 2;
 M = rho_icb * len ^ 2 * depth; % kg
 
 % data set
-step = 100;
+step = 5;
 time_all = zeros(1,step);
 U_all = zeros(1,step);
 V_all = zeros(1,step);
@@ -97,6 +97,22 @@ uo_skin_all = zeros(1,step);
 vo_skin_all = zeros(1,step);
 ua_skin_all = zeros(1,step);
 va_skin_all = zeros(1,step);
+Fa_drag_uall = zeros(1,step);
+Fa_skin_uall = zeros(1,step);
+Fa_drag_vall = zeros(1,step);
+Fa_skin_vall = zeros(1,step);
+Fo_drag_uall = zeros(1,step);
+Fo_skin_uall = zeros(1,step);
+Fo_drag_vall = zeros(1,step);
+Fo_skin_vall = zeros(1,step);
+Fa_u_all = zeros(1,step);
+Fa_v_all = zeros(1,step);
+Fo_u_all = zeros(1,step);
+Fo_v_all = zeros(1,step);
+Fcp_u_all = zeros(1,step);
+Fcp_v_all = zeros(1,step);
+
+
 
 % timestep
 dt = 6 * 60 * 60; % s
@@ -105,13 +121,13 @@ dt = 6 * 60 * 60; % s
 % ua = sqrt(sustr(x,y,step) / (rho_air * Cd)); m s-2
 %{
 for XI = 1:94 
-    for ETA = 1:120
+    for ETA = 1:118
         sustr_rho(XI,ETA,:) = 0.5 .* (sustr_read(XI,ETA,:) + sustr_read(XI+1,ETA,:));
         u_wind = sign(sustr_rho) .* sqrt(abs(sustr_rho) / (rho_air * Cd));
     end
 end
 
-for XI = 1:96
+for XI = 1:94
     for ETA = 1:118
         svstr_rho(XI,ETA,:) = 0.5 .* (svstr_read(XI,ETA,:) + svstr_read(XI,ETA+1,:));
         v_wind = sign(svstr_rho) .* sqrt(abs(svstr_rho) / (rho_air * Cd));
@@ -126,19 +142,32 @@ for i = 1:step
     [closest_diff_z, index_z] = min(abs((-tmp_z) - depth_icb_under)); % closest_diff is the difference between the bottom and the closest layer, index is the number of the closest layer
     len_rho_x = 0;
     len_rho_y = 0;
-    for index_x = x:95        
-        len_rho_x = dx_rho(index_x,y) + len_rho_x;
-        if len < len_rho_x
-           break
-        end
-    end
-    for index_y = y:120
-        len_rho_y = dy_rho(index_x,index_y) + len_rho_y;
-        if len < len_rho_y
-           break
-        end
-    end
 
+    for a = x:94        
+        len_rho_x = dx_rho(a,y) + len_rho_x;
+        if len < len_rho_x 
+           if  len > (len_rho_x - 0.5 * dx_rho(a,y))
+               index_x = a + 1;
+               break
+           else 
+               index_x = a;
+               break
+           end
+        end
+    end
+           
+    for b = y:118
+        len_rho_y = dy_rho(x,b) + len_rho_y;
+        if len < len_rho_y
+           if  len > (len_rho_y - 0.5 * dy_rho(x,b))
+               index_y = b + 1;
+               break
+           else
+               index_y = b;
+               break
+           end
+        end
+    end
 % area percentage under the ocean at u component(side)
     Num_cell_hori_u = index_y - y; 
     Num_cell_vert = 31 - index_z + 1;
@@ -217,12 +246,22 @@ for i = 1:step
     amib_skin = sqrt((ua_skin_all(i) - U) ^ 2 + (va_skin_all(i) - V) ^ 2);
 
 % Force due to Air
+    Fa_drag_u = rho_air * 0.5 * Ca * dA_a * amib * (ua_all(i) - U);
+    Fa_skin_u = rho_air * Cda_skin * Ad * amib * (ua_all(i) - U);
+    Fa_drag_v = rho_air * 0.5 * Ca * dA_a * amib * (va_all(i) - V);
+    Fa_skin_v = rho_air * Cda_skin * Ad * amib * (va_all(i) - V);
+
     Fa_u = rho_air * 0.5 * Ca * dA_a * amib * (ua_all(i) - U) + rho_air * Cda_skin * Ad * amib * (ua_all(i) - U);
     Fa_v = rho_air * 0.5 * Ca * dA_a * amib * (va_all(i) - V) + rho_air * Cda_skin * Ad * amib * (va_all(i) - V);
 
 % Force due to the Ocean
 %    Fo_u = rho_h2o * 0.5 * Co * dA_o * omib * (uo_cst_all(i) - U) + rho_h2o * Cdo_skin * Ad * omib_skin * (uo_cst_all(i) - U);
 %    Fo_v = rho_h2o * 0.5 * Co * dA_o * omib * (vo_cst_all(i) - V) + rho_h2o * Cdo_skin * Ad * omib_skin * (vo_cst_all(i) - V);
+    Fo_drag_u = rho_h2o * 0.5 * Co * dA_o * omib * uo_cst_all(i);
+    Fo_skin_u = rho_h2o * Cdo_skin * Ad * omib_skin * uo_skin_all(i);
+    Fo_drag_v = rho_h2o * 0.5 * Co * dA_o * omib * vo_cst_all(i);
+    Fo_skin_v = rho_h2o * Cdo_skin * Ad * omib_skin * vo_skin_all(i);
+
     Fo_u = rho_h2o * 0.5 * Co * dA_o * omib * uo_cst_all(i) + rho_h2o * Cdo_skin * Ad * omib_skin * uo_skin_all(i);
     Fo_v = rho_h2o * 0.5 * Co * dA_o * omib * vo_cst_all(i) + rho_h2o * Cdo_skin * Ad * omib_skin * vo_skin_all(i);
 
@@ -246,6 +285,20 @@ for i = 1:step
     V_all(i) = V;
     vel = sqrt(U ^ 2 + V ^ 2);
     vel_all(i) = vel;
+    Fa_drag_uall(i) = Fa_drag_u;
+    Fa_skin_uall(i) = Fa_skin_u;
+    Fa_drag_vall(i) = Fa_drag_v;
+    Fa_skin_vall(i) = Fa_skin_v;
+    Fo_drag_uall(i) = Fo_drag_u;
+    Fo_skin_uall(i) = Fo_skin_u;
+    Fo_drag_vall(i) = Fo_drag_v;
+    Fo_skin_vall(i) = Fo_skin_v;
+    Fa_u_all(i) = Fa_u;
+    Fa_v_all(i) = Fa_v;
+    Fo_u_all(i) = Fo_u;
+    Fo_v_all(i) = Fo_v;
+    Fcp_u_all(i) = Fcp_u;
+    Fcp_v_all(i) = Fcp_v;
     Fa_all(i) = sqrt(Fa_u ^ 2 + Fa_v ^ 2);
     Fo_all(i) = sqrt(Fo_u ^ 2 + Fo_v ^ 2);
     Fcp_all(i) = sqrt(Fcp_u ^ 2 + Fcp_v ^ 2);
