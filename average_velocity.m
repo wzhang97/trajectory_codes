@@ -11,36 +11,32 @@ clear all
 addpath(genpath('/v_mertz/iceberg_project/ROMS_data/'));
 
 % load grid information from the model
-fname = '/v_mertz/iceberg_project/ROMS_data/zeta_small.nc';
-gname = '/v_mertz/iceberg_project/ROMS_data/misom020_grd_small.nc';
-uname = '/v_mertz/iceberg_project/ROMS_data/uvel_small.nc';
-vname = '/v_mertz/iceberg_project/ROMS_data/vvel_small.nc';
+suname = '/v_mertz/iceberg_project/ROMS_data/sustr_rho_shelf.nc';
+svname = '/v_mertz/iceberg_project/ROMS_data/svstr_rho_shelf.nc';
+gname = '/v_mertz/iceberg_project/ROMS_data/misom020_grd.nc';
+uname = '/v_mertz/iceberg_project/ROMS_data/uvel_rho_shelf.nc';
+vname = '/v_mertz/iceberg_project/ROMS_data/vvel_rho_shelf.nc';
 strname = '/ds/projects/mertz/mdl/misom020_2/mer_his_0001.nc';
-lat_rho = ncread(gname,'lat_rho'); % 96 * 120
+lat_rho = ncread(gname,'lat_rho'); % 360 * 200
 lon_rho = ncread(gname,'lon_rho');
-x_rho = ncread(gname,'x_rho',[1 1],[94 118]);
-y_rho = ncread(gname,'y_rho',[1 1],[94 118]);
+x_rho = ncread(gname,'x_rho',[1 1],[261 160]);
+y_rho = ncread(gname,'y_rho',[1 1],[261 160]);
 [dx_rho,dy_rho,dz_rho] = calc_rhogrid_dxdydz(gname); % calcualte the length of each edges of a cell
 depths_rho = calc_depths_rho(gname); % depths of each level (96 * 120 * 31)
 bathy = ncread(gname,'h');
 mask_zice = ncread(gname,'mask_zice'); % mask on ice-shelf rho-points (option(1) = 'land', option(0) = 'water')
 mask_land = ncread(gname,'mask_rho'); % mask on RHO-points (option(0) = 'land', option(1) = 'water')
-zeta = ncread(fname,'zeta');
-%uo_read = ncread(uname,'u'); % meter second-1 (95x119x31x1456)
-%vo_read = ncread(vname,'v');
-%sustr_read = ncread(uname,'sustr'); % newton meter-2 (95x120x1456) 
-%svstr_read = ncread(vname,'svstr'); % (96x119x1456)
+uo_cst_rho = ncread(uname,'u'); % meter second-1 (261x160x31x1456)
+vo_cst_rho = ncread(vname,'v');
+sustr_rho = ncread(suname,'sustr'); % newton meter-2 (261x160x1456) 
+svstr_rho = ncread(svname,'svstr'); 
 Cs_r = ncread(strname,'Cs_r');
-%[u_rho,v_rho] = velocity2rho(gname,depths_rho,uo_read,vo_read,0); % calculate velocities on rho-grid
-load /v_mertz/iceberg_project/wzhang/trajectory_codes/vel_rho.mat;
 [X,Y] = meshgrid([1:size(x_rho,2)],[1:size(y_rho,1)]);
-uo_cst_rho = u_rho;
-vo_cst_rho = v_rho;
 end_layer = length(Cs_r);
 
 % indicate the initial location of the particle
-x_ini = 40;
-y_ini = 60;
+x_ini = 150;
+y_ini = 100;
 x = x_ini;
 y = y_ini;
 xx = x_rho(x,y);
@@ -121,6 +117,10 @@ Fsl_all = zeros(1,step);
 % timestep
 dt = 6 * 60 * 60; % s
 
+% calculate wind velocity
+u_wind = sign(sustr_rho) .* sqrt(abs(sustr_rho) / (rho_air * Cd));
+v_wind = sign(svstr_rho) .* sqrt(abs(svstr_rho) / (rho_air * Cd));
+
 % create a new matrix of wind velocity 
 % ua = sqrt(sustr(x,y,step) / (rho_air * Cd)); m s-2
 %{
@@ -147,7 +147,7 @@ for i = 1:step
     len_rho_x = 0;
     len_rho_y = 0;
 
-    for a = x:94        
+    for a = x:261        
         len_rho_x = dx_rho(a,y) + len_rho_x;
         if len < len_rho_x 
            if  len > (len_rho_x - 0.5 * dx_rho(a,y))
@@ -160,7 +160,7 @@ for i = 1:step
         end
     end
            
-    for b = y:118
+    for b = y:160
         len_rho_y = dy_rho(x,b) + len_rho_y;
         if len < len_rho_y
            if  len > (len_rho_y - 0.5 * dy_rho(x,b))
@@ -238,28 +238,28 @@ for i = 1:step
     amib_skin = sqrt((ua_skin_all(i) - U) ^ 2 + (va_skin_all(i) - V) ^ 2);
 
 % Force due to Air
-    Fa_u = rho_air * 0.5 * Ca * dA_a * amib * (ua_all(i) - U) + rho_air * Cda_skin * Ad * amib_skin * (ua_all(i) - U); % these are from thomas's paper
-    Fa_v = rho_air * 0.5 * Ca * dA_a * amib * (va_all(i) - V) + rho_air * Cda_skin * Ad * amib_skin * (va_all(i) - V);
+%    Fa_u = rho_air * 0.5 * Ca * dA_a * amib * (ua_all(i) - U) + rho_air * Cda_skin * Ad * amib_skin * (ua_all(i) - U); % these are from thomas's paper
+%    Fa_v = rho_air * 0.5 * Ca * dA_a * amib * (va_all(i) - V) + rho_air * Cda_skin * Ad * amib_skin * (va_all(i) - V);
 
     Fa_drag_u = rho_air * 0.5 * Ca * dA_a * amib * (ua_all(i) - U);
     Fa_skin_u = rho_air * Cda_skin * Ad * amib * (ua_all(i) - U);
     Fa_drag_v = rho_air * 0.5 * Ca * dA_a * amib * (va_all(i) - V);
     Fa_skin_v = rho_air * Cda_skin * Ad * amib * (va_all(i) - V);
 
-%    Fa_u = rho_air * 0.5 * Ca * dA_a * amib * (ua_all(i) - U) + rho_air * Cda_skin * Ad * amib * (ua_all(i) - U); % these two lines are from thomas's f90 codes
-%    Fa_v = rho_air * 0.5 * Ca * dA_a * amib * (va_all(i) - V) + rho_air * Cda_skin * Ad * amib * (va_all(i) - V);
+    Fa_u = rho_air * 0.5 * Ca * dA_a * amib * (ua_all(i) - U) + rho_air * Cda_skin * Ad * amib * (ua_all(i) - U); % these two lines are from thomas's f90 codes
+    Fa_v = rho_air * 0.5 * Ca * dA_a * amib * (va_all(i) - V) + rho_air * Cda_skin * Ad * amib * (va_all(i) - V);
 
 % Force due to the Ocean
-    Fo_u = rho_h2o * 0.5 * Co * dA_o * omib * (uo_cst_all(i) - U) + rho_h2o * Cdo_skin * Ad * omib_skin * (uo_cst_all(i) - U); %from thomas's paper
-    Fo_v = rho_h2o * 0.5 * Co * dA_o * omib * (vo_cst_all(i) - V) + rho_h2o * Cdo_skin * Ad * omib_skin * (vo_cst_all(i) - V);
+%    Fo_u = rho_h2o * 0.5 * Co * dA_o * omib * (uo_cst_all(i) - U) + rho_h2o * Cdo_skin * Ad * omib_skin * (uo_cst_all(i) - U); %from thomas's paper
+%    Fo_v = rho_h2o * 0.5 * Co * dA_o * omib * (vo_cst_all(i) - V) + rho_h2o * Cdo_skin * Ad * omib_skin * (vo_cst_all(i) - V);
 
     Fo_drag_u = rho_h2o * 0.5 * Co * dA_o * omib * uo_cst_all(i);
     Fo_skin_u = rho_h2o * Cdo_skin * Ad * omib_skin * uo_skin_all(i);
     Fo_drag_v = rho_h2o * 0.5 * Co * dA_o * omib * vo_cst_all(i);
     Fo_skin_v = rho_h2o * Cdo_skin * Ad * omib_skin * vo_skin_all(i);
 
-%    Fo_u = rho_h2o * 0.5 * Co * dA_o * omib * uo_cst_all(i) + rho_h2o * Cdo_skin * Ad * omib_skin * uo_skin_all(i); % from thomas's codes
-%    Fo_v = rho_h2o * 0.5 * Co * dA_o * omib * vo_cst_all(i) + rho_h2o * Cdo_skin * Ad * omib_skin * vo_skin_all(i);
+    Fo_u = rho_h2o * 0.5 * Co * dA_o * omib * uo_cst_all(i) + rho_h2o * Cdo_skin * Ad * omib_skin * uo_skin_all(i); % from thomas's codes
+    Fo_v = rho_h2o * 0.5 * Co * dA_o * omib * vo_cst_all(i) + rho_h2o * Cdo_skin * Ad * omib_skin * vo_skin_all(i);
 
 % Coriolis Force & Pressure Gradient Force
     Fcp_u = -(M * f * (V - vo_cst_all(i)));
