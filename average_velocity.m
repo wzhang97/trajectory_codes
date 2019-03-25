@@ -39,8 +39,8 @@ vo_cst_rho = v_rho;
 end_layer = length(Cs_r);
 
 % indicate the initial location of the particle
-x_ini = 80;
-y_ini = 90;
+x_ini = 40;
+y_ini = 60;
 x = x_ini;
 y = y_ini;
 xx = x_rho(x,y);
@@ -320,7 +320,6 @@ for i = 1:step
        disp(['outside of the domain! when time = ',num2str(time_all(i-1)),' h']);
        disp(['x = ',num2str(xx_all(i-1)),' y = ',num2str(yy_all(i-1))]);
        break
-%{
     elseif mask_zice(x,y) == 1
        disp(['iceberg on the ice! when time = ',num2str(time_all(i-1)),' h']);
        disp(['x = ',num2str(xx_all(i-1)),' y = ',num2str(yy_all(i-1))]);
@@ -333,7 +332,6 @@ for i = 1:step
        disp(['grounded! when time = ',num2str(time_all(i-1)),' h']);
        disp(['x = ',num2str(xx_all(i-1)),' y = ',num2str(yy_all(i-1))]);
        break
-%} 
     end
 end
 
